@@ -158,15 +158,42 @@ You should see the Wisecow app with a secure padlock (no warning).
 
 ---
 
-## 10. CI/CD Pipeline
+## 10. Automated CI/CD with GitHub Actions Self-Hosted Runner
 
-This project includes a GitHub Actions workflow that:
+This project uses a **self-hosted GitHub Actions runner** on your local machine to enable full CI/CD automation with Minikube.  
+Every push to the `main` branch will:
 
-- Builds and pushes the Docker image on every commit.
-- (Optional/Challenge) Deploys to your Kubernetes cluster automatically.
+1. Build and push the Docker image to Docker Hub.
+2. Automatically deploy the latest image to your local Minikube cluster using `kubectl apply`.
 
-See `.github/workflows/` for details.
+### How to Set Up the Self-Hosted Runner
 
+1. **Register the runner:**
+   - Go to your repository on GitHub → Settings → Actions → Runners → New self-hosted runner.
+   - Follow the instructions for your OS (macOS/Linux/Windows).
+
+2. **Start the runner:**
+   ```sh
+   cd actions-runner
+   ./run.sh
+   ```
+
+3. **Add your Minikube kubeconfig as a GitHub secret:**
+   - Copy the contents of `~/.kube/config`.
+   - Go to GitHub → Settings → Secrets and variables → Actions → New repository secret.
+   - Name it `KUBECONFIG` and paste the contents.
+
+4. **Add your Docker Hub credentials as secrets:**
+   - `DOCKERHUB_USERNAME`
+   - `DOCKERHUB_TOKEN`
+
+5. **Ensure your `.github/workflows/deploy.yaml` uses `runs-on: self-hosted` for both jobs.**
+
+Now, every push to `main` will trigger a build and deploy to your local Minikube cluster automatically!
+
+> **Note:** The self-hosted runner must be running on the same machine as your Minikube cluster and have access to Docker and kubectl.
+
+---
 ---
 
 ## Troubleshooting
