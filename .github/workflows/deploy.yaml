@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -27,10 +27,9 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/wisecow:latest
 
-  # Optional: Deploy to Kubernetes (requires kubeconfig as a secret)
   deploy:
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
@@ -48,4 +47,8 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl set image deployment/wisecow wisecow=${{ secrets.DOCKERHUB_USERNAME }}/wisecow:latest
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
+          # Optionally, update the image directly:
+          # kubectl set image deployment/wisecow wisecow=${{ secrets.DOCKERHUB_USERNAME }}/wisecow:latest

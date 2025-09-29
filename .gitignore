@@ -2,4 +2,5 @@ wisecow.local-key.pem
 wisecow.local.pem
 wisecow.crt
 wisecow.key
+actions-runner/
 
