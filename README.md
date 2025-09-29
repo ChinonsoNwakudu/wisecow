@@ -1,28 +1,196 @@
 # Cow wisdom web server
 
+## Wisecow Application - Kubernetes Deployment Guide
+
+This guide will help you **containerize**, **deploy**, and **secure** the Wisecow application on a local Kubernetes cluster (Minikube).  
+You will also set up TLS for secure HTTPS access using a locally trusted certificate.
+
+---
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [1. Clone the Repository](#1-clone-the-repository)
+- [2. Build and Push the Docker Image](#2-build-and-push-the-docker-image)
+- [3. Start Minikube](#3-start-minikube)
+- [4. Deploy Wisecow to Kubernetes](#4-deploy-wisecow-to-kubernetes)
+- [5. Set Up TLS with mkcert](#5-set-up-tls-with-mkcert)
+- [6. Create the TLS Secret](#6-create-the-tls-secret)
+- [7. Update /etc/hosts](#7-update-etchosts)
+- [8. Start Minikube Tunnel](#8-start-minikube-tunnel)
+- [9. Access the Application](#9-access-the-application)
+- [10. CI/CD Pipeline](#10-cicd-pipeline)
+- [Troubleshooting](#troubleshooting)
+
+---
+
 ## Prerequisites
 
+- [Docker](https://www.docker.com/products/docker-desktop/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [Minikube](https://minikube.sigs.k8s.io/docs/)
+- [mkcert](https://github.com/FiloSottile/mkcert) (`brew install mkcert`)
+- [GitHub account](https://github.com/)
+
+---
+
+## 1. Clone the Repository
+
+```sh
+git clone https://github.com/nyrahul/wisecow.git
+cd wisecow
 ```
-sudo apt install fortune-mod cowsay -y
+
+---
+
+## 2. Build and Push the Docker Image
+
+> **Note:** Update the image name as needed for your Docker Hub or registry.
+
+```sh
+docker build -t <your-dockerhub-username>/wisecow:latest .
+docker push <your-dockerhub-username>/wisecow:latest
 ```
 
-## How to use?
+Update the `deployment.yaml` to use your image if necessary.
 
-1. Run `./wisecow.sh`
-2. Point the browser to server port (default 4499)
+---
 
-## What to expect?
-![wisecow](https://github.com/nyrahul/wisecow/assets/9133227/8d6bfde3-4a5a-480e-8d55-3fef60300d98)
+## 3. Start Minikube
 
-# Problem Statement
-Deploy the wisecow application as a k8s app
+```sh
+minikube start
+```
 
-## Requirement
-1. Create Dockerfile for the image and corresponding k8s manifest to deploy in k8s env. The wisecow service should be exposed as k8s service.
-2. Github action for creating new image when changes are made to this repo
-3. [Challenge goal]: Enable secure TLS communication for the wisecow app.
+---
 
-## Expected Artifacts
-1. Github repo containing the app with corresponding dockerfile, k8s manifest, any other artifacts needed.
-2. Github repo with corresponding github action.
-3. Github repo should be kept private and the access should be enabled for following github IDs: nyrahul
+## 4. Deploy Wisecow to Kubernetes
+
+Apply the manifests:
+
+```sh
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+```
+
+---
+
+## 5. Set Up TLS with mkcert
+
+Install mkcert if you haven't:
+
+```sh
+brew install mkcert
+mkcert -install
+```
+
+Generate a certificate for `wisecow.local`:
+
+```sh
+mkcert wisecow.local
+```
+
+This creates `wisecow.local.pem` and `wisecow.local-key.pem`.
+
+---
+
+## 6. Create the TLS Secret
+
+```sh
+kubectl create secret tls wisecow-tls \
+  --cert=wisecow.local.pem \
+  --key=wisecow.local-key.pem
+```
+
+If the secret already exists, update it:
+
+```sh
+kubectl create secret tls wisecow-tls \
+  --cert=wisecow.local.pem \
+  --key=wisecow.local-key.pem \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+---
+
+## 7. Update /etc/hosts
+
+Add this line to your `/etc/hosts` file:
+
+```
+127.0.0.1 wisecow.local
+```
+
+Or, if using Minikube’s IP:
+
+```sh
+minikube ip
+```
+Then add:
+```
+<minikube-ip> wisecow.local
+```
+
+---
+
+## 8. Start Minikube Tunnel
+
+In a new terminal window, run:
+
+```sh
+minikube tunnel
+```
+
+Leave this running.
+
+---
+
+## 9. Access the Application
+
+Open your browser and go to:
+
+```
+https://wisecow.local
+```
+
+You should see the Wisecow app with a secure padlock (no warning).
+
+---
+
+## 10. CI/CD Pipeline
+
+This project includes a GitHub Actions workflow that:
+
+- Builds and pushes the Docker image on every commit.
+- (Optional/Challenge) Deploys to your Kubernetes cluster automatically.
+
+See `.github/workflows/` for details.
+
+---
+
+## Troubleshooting
+
+- **Browser says "Not Secure":**  
+  Make sure you used `mkcert` and created the secret as above.
+- **Cannot access `wisecow.local`:**  
+  - Check `/etc/hosts` entry.
+  - Ensure `minikube tunnel` is running.
+  - Check Ingress and Service status:
+    ```sh
+    kubectl get ingress
+    kubectl get svc
+    ```
+- **TLS Secret errors:**  
+  Update the secret as shown in step 6.
+
+---
+
+## Notes
+
+- Do **not** commit your certificate or key files (`wisecow.local.pem`, `wisecow.local-key.pem`). They are in `.gitignore`.
+- Each user should generate their own certificate for local development.
+
+---
+
+**Enjoy your secure Wisecow deployment!**
