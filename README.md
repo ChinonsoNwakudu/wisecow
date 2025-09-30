@@ -134,6 +134,72 @@ Then add:
 
 ---
 
+### Option B: Automated TLS with cert-manager (Recommended for Kubernetes users)
+
+1. **Install cert-manager:**
+
+   ```sh
+   helm repo add cert-manager https://charts.jetstack.io
+   helm repo update
+   helm install \
+     cert-manager cert-manager/cert-manager \
+     --set crds.enabled=true \
+     --create-namespace --namespace cert-manager
+   ```
+
+2. **Create a self-signed ClusterIssuer:**
+
+   Create a file named `selfsigned-clusterissuer.yaml`:
+
+   ```yaml
+   apiVersion: cert-manager.io/v1
+   kind: ClusterIssuer
+   metadata:
+     name: selfsigned-clusterissuer
+   spec:
+     selfSigned: {}
+   ```
+
+   Apply it:
+
+   ```sh
+   kubectl apply -f selfsigned-clusterissuer.yaml
+   ```
+
+3. **Update your Ingress manifest:**
+Add this annotation and TLS section:
+
+   ```yaml
+   metadata:
+     annotations:
+       cert-manager.io/cluster-issuer: selfsigned-clusterissuer
+   spec:
+     tls:
+       - hosts:
+           - wisecow.local
+         secretName: wisecow-tls
+   ```
+
+4. **Apply your Ingress:**
+
+   ```sh
+   kubectl apply -f k8s/ingress.yaml
+   ```
+
+5. **Add to `/etc/hosts`:**
+
+   ```sh
+   echo "127.0.0.1 wisecow.local" | sudo tee -a /etc/hosts
+   ```
+
+**Note:**  
+- The cert-manager option is great for Kubernetes-native, automated TLS.
+- The mkcert option is best if you want a certificate trusted by your browser without warnings.
+
+---
+
+**Choose the option that best fits your workflow!**
+
 ## 8. Start Minikube Tunnel
 
 In a new terminal window, run:
